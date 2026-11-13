@@ -4,17 +4,17 @@
 // probabilities in [0,1] that move in jumps and sit near the edges.
 //   - logit(p) = ln(p/(1-p)), p clipped to [0.001, 0.999]
 //   - sigma: blend of a robust MAD estimate (weight 0.7) and the plain
-//     standard deviation (0.3) of the last 360 one-minute logit moves,
+//     standard deviation (0.3) of the last 720 one-minute logit moves,
 //     clamped to [0.0005, 0.05] logit units per sqrt-minute
 //   - no drift: prediction-market prices are martingales; adding momentum
 //     made the practice score worse on every case
-//   - spread grows as h^0.4 (sub-diffusive: probabilities are bounded and
+//   - spread grows as h^0.35 (sub-diffusive: probabilities are bounded and
 //     the 24 Yes prices sum to ~1, so long-horizon moves mean-revert),
-//     with the outer quantiles widened x1.15 for heavy-tailed jumps
+//     with the outer quantiles widened x1.5 for heavy-tailed jumps
 //   - median stays at the checkpoint price; quantiles are the sigmoid of
 //     the logit walk, clamped to [0,1], rounded to 6 decimals
 //
-// Practice (6 cases, local scorer against Polymarket history): loss 0.2833
+// Practice (6 cases, local scorer against Polymarket history): loss 0.2812
 // vs house baseline 0.3636, beating it on all six cases.
 // Deterministic: no randomness, no clock, no network. Two runs on the same
 // case write byte-identical output.
@@ -27,17 +27,17 @@ const OUTPUT_DIR = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
 
 const QUANTILES = [0.05, 0.25, 0.5, 0.75, 0.95];
 const Z = [-1.644854, -0.67449, 0, 0.67449, 1.644854];
-/** Last N one-minute moves used for the volatility estimate (6 hours). */
-const SIGMA_WINDOW = 360;
+/** Last N one-minute moves used for the volatility estimate (12 hours). */
+const SIGMA_WINDOW = 720;
 /** Robust (MAD) weight in the sigma blend; the rest is the plain std. */
 const MAD_WEIGHT = 0.7;
 /** Sigma floor/cap in logit units per sqrt-minute. */
 const SIGMA_FLOOR = 0.0005;
 const SIGMA_CAP = 0.05;
 /** Spread grows as h ** ALPHA, not sqrt(h): bounded probabilities mean-revert. */
-const ALPHA = 0.4;
+const ALPHA = 0.35;
 /** Outer (5%/95%) quantiles widened for heavy-tailed jumps. */
-const TAIL = 1.15;
+const TAIL = 1.5;
 /** Logit clip: prices are clipped before the transform. */
 const P_MIN = 0.001;
 const P_MAX = 0.999;
